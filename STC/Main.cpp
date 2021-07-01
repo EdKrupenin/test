@@ -41,6 +41,7 @@ int main() {
         getCoordinates(file,doubleCoordinates);
         printCoordinates(doubleCoordinates);
         file.close();
+        doubleCoordinates.clear();
     }
     catch (const std::ifstream::failure& e) {
         std::cout << "Exception opening/reading file";
