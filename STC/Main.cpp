@@ -58,7 +58,7 @@ void swapQuestions(std::vector< std::pair<double, double>> &doubleCoordinates){
 
 /// Функция записи в бинарный файл
 /// \param tab ссылка на экземпляр файла
-void writeBin(std::fstream &tab){
+void writeBin(std::fstream &tab,std::vector< std::pair<double, double>> &doubleCoordinates){
     /*
         binFile.open("C:\\Project\\test\\STC\\binFile.bin", std::ios::binary);
         for (int i = 0; i < doubleCoordinates.size() ; ++i) {
@@ -66,15 +66,12 @@ void writeBin(std::fstream &tab){
         }
         binFile.close();
     */
-    std::string sout;
     for(size_t i = 0; i < doubleCoordinates.size(); i++)
     {
-        size_t size = sizeof(doubleCoordinates[i])+sizeof(";")+sizeof("\n");
-        // пишем в файл длину строки:
-        tab.write( (char *)&size, sizeof(size) );
-        sout = std::to_string(doubleCoordinates[i].first) + ';' + std::to_string(doubleCoordinates[i].second) + '\n';
-        // теперь саму строку:
-        tab.write( sout.c_str(), size );
+        tab.write(reinterpret_cast<char*> (&doubleCoordinates[i].first), sizeof(doubleCoordinates[i].first)); // записываем х
+        tab.write(";", sizeof(char)); // разделитель
+        tab.write(reinterpret_cast<char*> (&doubleCoordinates[i].second), sizeof(doubleCoordinates[i].second)); // записываем y
+        tab.write("\0",sizeof(char)); // признак окончания строки
     }
     tab.close();
 }
@@ -89,21 +86,15 @@ void readBin(std::ifstream &file,std::vector< std::pair<double, double>> &double
     size = file.tellg();
     std::cout << "file length : " << size << " bytes" << std::endl;
     file.seekg (0, std::ios::beg);
-
     while ( size > 0 )
     {
-        size_t size_len;
-        // читаем длину очередной строки:
-        file.read( (char *)&size_len, sizeof(size) );
-        // читаем саму строку:
-        file>>s;
-        std::cout  << s <<std::endl ;
-        size-=sizeof(s);
-        std::regex regular ("(.*?);(.*)");  //Регулярное выражение для поиска координат разделенных ;
-        std::cmatch result;                      //Результат поиска с помощью регулярного выражения
-        std::regex_search(s.c_str(), result, regular);
-        doubleCoordinatesBin.push_back(std::make_pair(atof(result[1].str().c_str()),
-                                                      atof(result[2].str().c_str())));
+        double x , y = 0;
+        file.read((char*)&x,sizeof(x)); // читаем первую координату
+        std::getline(file,s,';'); // получаем разделитель
+        file.read((char*)&y,sizeof(y)); // читаем вторую координату
+        std::getline(file,s,'\0'); // получаем конец строки
+        doubleCoordinatesBin.push_back(std::make_pair(x,y));
+        size-=(sizeof(double)*2+sizeof(char)*2); // отнимаем прочитанное кол-во байт
     }
     file.close();
 }
@@ -123,7 +114,7 @@ int main() {
         printCoordinates(doubleCoordinates);
 
         std::fstream tab("C:\\Project\\test\\STC\\binFile.bin", std::ios::binary | std::ios::out);
-        writeBin(tab);
+        writeBin(tab,doubleCoordinates);
 
         file.open("C:\\Project\\test\\STC\\binFile.bin", std::ios::binary| std::ios::in );
         readBin(file,doubleCoordinatesBin);
